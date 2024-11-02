@@ -13,7 +13,6 @@ pygame.display.set_caption("Pac-Man Like Game")
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 YELLOW = (255, 255, 0)
-BLUE = (0, 0, 255)
 RED = (255, 0, 0)
 
 # キャラクター設定
@@ -23,59 +22,25 @@ dot_size = 5
 pacman_speed = 5
 ghost_speed = 2
 
-# 壁の設定
-walls = [
-    pygame.Rect(100, 100, 400, 10),
-    pygame.Rect(100, 200, 400, 10),
-    pygame.Rect(100, 300, 400, 10),
-    pygame.Rect(100, 100, 10, 200),
-    pygame.Rect(490, 100, 10, 200),
-]
-
 # ゲームデータの初期化
 def init_game():
     global pacman_x, pacman_y, ghosts, dots, score
-
-    # プレイヤーが壁と重ならない位置に生成されるまでループ
-    while True:
-        pacman_x, pacman_y = random.randint(0, screen_width - pacman_size), random.randint(0, screen_height - pacman_size)
-        pacman_rect = pygame.Rect(pacman_x, pacman_y, pacman_size, pacman_size)
-        
-        # 壁と重なっていないか確認
-        if not any(pacman_rect.colliderect(wall) for wall in walls):
-            break  # 壁と重ならない位置が見つかったらループを抜ける
-
-    # ゴーストとドットの初期位置
+    pacman_x, pacman_y = screen_width // 2, screen_height // 2  # プレイヤーの初期位置を中央に設定
     ghosts = [{"x": random.randint(50, screen_width - 50), "y": random.randint(50, screen_height - 50)} for _ in range(3)]
     dots = [pygame.Rect(random.randint(50, screen_width - 50), random.randint(50, screen_height - 50), dot_size, dot_size) for _ in range(20)]
     score = 0
 
-
-# プレイヤーの移動
+# プレイヤーの移動（画面外に出ないように制限）
 def move_pacman(keys):
     global pacman_x, pacman_y
     if keys[pygame.K_LEFT]:
-        pacman_x -= pacman_speed
+        pacman_x = max(0, pacman_x - pacman_speed)  # 左端に到達したらそれ以上左に行かない
     if keys[pygame.K_RIGHT]:
-        pacman_x += pacman_speed
+        pacman_x = min(screen_width - pacman_size, pacman_x + pacman_speed)  # 右端に到達したらそれ以上右に行かない
     if keys[pygame.K_UP]:
-        pacman_y -= pacman_speed
+        pacman_y = max(0, pacman_y - pacman_speed)  # 上端に到達したらそれ以上上に行かない
     if keys[pygame.K_DOWN]:
-        pacman_y += pacman_speed
-
-    # 壁との衝突判定
-    pacman_rect = pygame.Rect(pacman_x, pacman_y, pacman_size, pacman_size)
-    for wall in walls:
-        if pacman_rect.colliderect(wall):
-            # 衝突時の移動修正
-            if keys[pygame.K_LEFT]:
-                pacman_x += pacman_speed
-            if keys[pygame.K_RIGHT]:
-                pacman_x -= pacman_speed
-            if keys[pygame.K_UP]:
-                pacman_y += pacman_speed
-            if keys[pygame.K_DOWN]:
-                pacman_y -= pacman_speed
+        pacman_y = min(screen_height - pacman_size, pacman_y + pacman_speed)  # 下端に到達したらそれ以上下に行かない
 
 # ゴーストの追尾移動
 def move_ghosts():
@@ -121,10 +86,6 @@ def draw_game():
     for dot in dots:
         pygame.draw.rect(screen, WHITE, dot)
     
-    # 壁の描画
-    for wall in walls:
-        pygame.draw.rect(screen, BLUE, wall)
-
     # スコア表示
     font = pygame.font.Font(None, 36)
     score_text = font.render(f"Score: {score}", True, WHITE)
