@@ -24,6 +24,9 @@ dot_size = 5
 pacman_speed = 5
 ghost_speed = 2
 
+# 敵の数の設定
+initial_ghost_count = 5  # 初期の敵の数
+
 # 迷路の定義 (1が壁, 0が道)
 maze = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -81,6 +84,11 @@ def move_ghosts():
             if not any(ghost_rect.colliderect(wall) for wall in walls):
                 ghost["x"], ghost["y"] = new_x, new_y  # 壁に衝突しない場合のみ位置を更新
 
+# 敵をランダムに消去する関数
+def eliminate_random_enemy():
+    if ghosts:
+        ghosts.pop(random.randint(0, len(ghosts) - 1))
+
 # 描画処理
 def draw_game():
     screen.fill(BLACK)
@@ -107,6 +115,10 @@ while running:
     
     # キー入力の取得
     keys = pygame.key.get_pressed()
+
+    # ランダムに敵を消去
+    if keys[pygame.K_e]:
+        eliminate_random_enemy()
     
     # 各関数の実行
     move_pacman(keys)
