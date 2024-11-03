@@ -21,7 +21,9 @@ BLUE = (0, 0, 255)
 pacman_size = cell_size - 4
 ghost_size = cell_size - 4
 dot_size = 5
-pacman_speed = 5
+normal_speed = 5
+boosted_speed = 8  # 加速時の速度
+pacman_speed = normal_speed
 ghost_speed = 2
 
 # 敵の数の設定
@@ -55,7 +57,15 @@ ghosts = [{"x": 5 * cell_size, "y": 5 * cell_size} for _ in range(3)]
 
 # プレイヤーの移動（壁との衝突を考慮）
 def move_pacman(keys):
-    global pacman_x, pacman_y
+    global pacman_x, pacman_y,pacman_speed
+
+    # Shiftキーが押されている間は加速
+    if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
+        pacman_speed = boosted_speed
+    else:
+        pacman_speed = normal_speed
+
+
     new_x, new_y = pacman_x, pacman_y
     if keys[pygame.K_LEFT]:
         new_x -= pacman_speed
