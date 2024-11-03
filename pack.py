@@ -16,6 +16,7 @@ WHITE = (255, 255, 255)
 YELLOW = (255, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)  # 回復表示用の色
 
 # キャラクター設定
 pacman_size = cell_size - 4
@@ -23,6 +24,11 @@ ghost_size = cell_size - 4
 dot_size = 5
 pacman_speed = 5
 ghost_speed = 2
+
+# 体力設定
+max_health = 100
+current_health = max_health
+healing_amount = 20  # 回復量
 
 # 迷路の定義 (1が壁, 0が道)
 maze = [
@@ -81,6 +87,12 @@ def move_ghosts():
             if not any(ghost_rect.colliderect(wall) for wall in walls):
                 ghost["x"], ghost["y"] = new_x, new_y  # 壁に衝突しない場合のみ位置を更新
 
+# 回復スキル
+def heal():
+    global current_health
+    if current_health < max_health:
+        current_health = min(current_health + healing_amount, max_health)  # 最大HPを超えないようにする
+
 # 描画処理
 def draw_game():
     screen.fill(BLACK)
@@ -95,6 +107,10 @@ def draw_game():
     # ゴーストの描画
     for ghost in ghosts:
         pygame.draw.rect(screen, RED, pygame.Rect(ghost["x"], ghost["y"], ghost_size, ghost_size))
+    
+    # HPバーの描画
+    pygame.draw.rect(screen, RED, (10, 10, max_health, 10))  # 最大体力
+    pygame.draw.rect(screen, GREEN, (10, 10, current_health, 10))  # 現在の体力
 
 # ゲームループ
 clock = pygame.time.Clock()
@@ -107,6 +123,10 @@ while running:
     
     # キー入力の取得
     keys = pygame.key.get_pressed()
+    
+    # 回復スキル発動
+    if keys[pygame.K_f]:
+        heal()
     
     # 各関数の実行
     move_pacman(keys)
