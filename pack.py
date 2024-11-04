@@ -5,8 +5,8 @@ import math
 
 # 初期設定
 pygame.init()
-screen_width, screen_height = 600, 400
-cell_size = 20
+screen_width, screen_height = 960,360
+cell_size = 40
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Pac-Man Like Maze Game")
 
