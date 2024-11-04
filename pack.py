@@ -22,13 +22,20 @@ GREEN = (0, 255, 0)  # 回復表示用の色
 pacman_size = cell_size - 4
 ghost_size = cell_size - 4
 dot_size = 5
-pacman_speed = 5
+normal_speed = 5
+boosted_speed = 8  # 加速時の速度
+pacman_speed = normal_speed
 ghost_speed = 2
+
 
 # 体力設定
 max_health = 100
 current_health = max_health
 healing_amount = 20  # 回復量
+
+# 敵の数の設定
+initial_ghost_count = 5  # 初期の敵の数
+
 
 # 迷路の定義 (1が壁, 0が道)
 maze = [
@@ -58,7 +65,15 @@ ghosts = [{"x": 5 * cell_size, "y": 5 * cell_size} for _ in range(3)]
 
 # プレイヤーの移動（壁との衝突を考慮）
 def move_pacman(keys):
-    global pacman_x, pacman_y
+    global pacman_x, pacman_y,pacman_speed
+
+    # Shiftキーが押されている間は加速
+    if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
+        pacman_speed = boosted_speed
+    else:
+        pacman_speed = normal_speed
+
+
     new_x, new_y = pacman_x, pacman_y
     if keys[pygame.K_LEFT]:
         new_x -= pacman_speed
@@ -87,11 +102,18 @@ def move_ghosts():
             if not any(ghost_rect.colliderect(wall) for wall in walls):
                 ghost["x"], ghost["y"] = new_x, new_y  # 壁に衝突しない場合のみ位置を更新
 
+
 # 回復スキル
 def heal():
     global current_health
     if current_health < max_health:
         current_health = min(current_health + healing_amount, max_health)  # 最大HPを超えないようにする
+
+# 敵をランダムに消去する関数
+def eliminate_random_enemy():
+    if ghosts:
+        ghosts.pop(random.randint(0, len(ghosts) - 1))
+
 
 # 描画処理
 def draw_game():
@@ -123,6 +145,10 @@ while running:
     
     # キー入力の取得
     keys = pygame.key.get_pressed()
+
+    # ランダムに敵を消去
+    if keys[pygame.K_e]:
+        eliminate_random_enemy()
     
     # 回復スキル発動
     if keys[pygame.K_f]:
