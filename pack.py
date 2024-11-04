@@ -22,8 +22,7 @@ GREEN = (0,255,0)
 pacman_size = cell_size - 4
 ghost_size = cell_size - 4
 dot_size = 5
-normal_speed = 5
-boosted_speed = 8  # 加速時の速度
+normal_speed = cell_size
 pacman_speed = normal_speed
 ghost_speed = 2
 
@@ -66,31 +65,30 @@ DOT_RESPAWN_TIME = 5000
 last_dot_spawa_time = pygame.time.get_ticks()
 # プレイヤーの移動（壁との衝突を考慮）
 def move_pacman(keys):
-    global pacman_x, pacman_y,pacman_speed,score
+    global pacman_x, pacman_y,score
 
-    # Shiftキーが押されている間は加速
-    if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
-        pacman_speed = boosted_speed
-    else:
-        pacman_speed = normal_speed
-
-
-    new_x, new_y = pacman_x, pacman_y
+    direction = None
+    new_x, new_y = pacman_x, pacman_y  # 初期値を設定
+    cell_size = 10
     if keys[pygame.K_LEFT]:
-        new_x -= pacman_speed
-    if keys[pygame.K_RIGHT]:
-        new_x += pacman_speed
-    if keys[pygame.K_UP]:
-        new_y -= pacman_speed
-    if keys[pygame.K_DOWN]:
-        new_y += pacman_speed
+        direction = (-cell_size, 0)
+    elif keys[pygame.K_RIGHT]:
+        direction = (cell_size, 0)
+    elif keys[pygame.K_UP]:
+        direction = (0, -cell_size)
+    elif keys[pygame.K_DOWN]:
+        direction = (0, cell_size)
+    
+    if direction:
+        new_x += direction[0]
+        new_y += direction[1]
+        pacman_rect = pygame.Rect(new_x, new_y, pacman_size, pacman_size)
+        if not any(pacman_rect.colliderect(wall) for wall in walls):
+            pacman_x, pacman_y = new_x, new_y
 
-    # 壁との衝突判定
-    pacman_rect = pygame.Rect(new_x, new_y, pacman_size, pacman_size)
-    if not any(pacman_rect.colliderect(wall) for wall in walls):
-        pacman_x, pacman_y = new_x, new_y  # 壁に衝突しない場合のみ位置を更新
 
     # ドットとの衝突判定
+    pacman_rect = pygame.Rect(pacman_x,pacman_y,pacman_size,pacman_size)
     for dot in dots[:]:
         if pacman_rect.colliderect(dot):
             dots.remove(dot)
@@ -170,7 +168,7 @@ while running:
     move_pacman(keys)
     move_ghosts()
     respawn_dots()
-    draw_game()
+   
 
     # 敵との衝突判定
     pacman_rect = pygame.Rect(pacman_x, pacman_y, pacman_size, pacman_size)
@@ -181,5 +179,6 @@ while running:
             pygame.quit()
             sys.exit()
     
+    draw_game()
     pygame.display.flip()
     clock.tick(30)
