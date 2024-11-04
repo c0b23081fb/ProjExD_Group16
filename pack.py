@@ -16,6 +16,7 @@ WHITE = (255, 255, 255)
 YELLOW = (255, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+GREEN = (0,255,0)
 
 # キャラクター設定
 pacman_size = cell_size - 4
@@ -47,17 +48,25 @@ pacman_x, pacman_y = 1 * cell_size, 1 * cell_size
 
 # 壁のリスト作成
 walls = []
+dots = []
 for row_index, row in enumerate(maze):
     for col_index, cell in enumerate(row):
         if cell == 1:
             walls.append(pygame.Rect(col_index * cell_size, row_index * cell_size, cell_size, cell_size))
+        elif cell == 0:
+            dots.append(pygame.Rect(col_index* cell_size + cell_size // 2 - dot_size // 2, row_index * cell_size + cell_size // 2 - dot_size // 2, dot_size, dot_size))
 
 # ゴーストの位置をランダムに初期化
 ghosts = [{"x": 5 * cell_size, "y": 5 * cell_size} for _ in range(3)]
 
+score = 0
+
+# タイマー設定
+DOT_RESPAWN_TIME = 5000
+last_dot_spawa_time = pygame.time.get_ticks()
 # プレイヤーの移動（壁との衝突を考慮）
 def move_pacman(keys):
-    global pacman_x, pacman_y,pacman_speed
+    global pacman_x, pacman_y,pacman_speed,score
 
     # Shiftキーが押されている間は加速
     if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
@@ -81,6 +90,12 @@ def move_pacman(keys):
     if not any(pacman_rect.colliderect(wall) for wall in walls):
         pacman_x, pacman_y = new_x, new_y  # 壁に衝突しない場合のみ位置を更新
 
+    # ドットとの衝突判定
+    for dot in dots[:]:
+        if pacman_rect.colliderect(dot):
+            dots.remove(dot)
+            score += 10
+
 # ゴーストの移動
 def move_ghosts():
     for ghost in ghosts:
@@ -99,6 +114,19 @@ def eliminate_random_enemy():
     if ghosts:
         ghosts.pop(random.randint(0, len(ghosts) - 1))
 
+# ドットの再生成関数
+def respawn_dots():
+    global last_dot_spawa_time
+    current_time = pygame.time.get_ticks()
+    if current_time - last_dot_spawa_time > DOT_RESPAWN_TIME:
+        last_dot_spawa_time = current_time
+        for row_index, row in enumerate(maze):
+            for col_index, cell in enumerate(row):
+                if cell == 0:
+                    dot_rect = pygame.Rect(col_index * cell_size + cell_size // 2 - dot_size // 2, row_index * cell_size + cell_size // 2 - dot_size // 2, dot_size, dot_size)
+                    if dot_rect not in dots:
+                        dots.append(dot_rect)
+
 # 描画処理
 def draw_game():
     screen.fill(BLACK)
@@ -107,12 +135,20 @@ def draw_game():
     for wall in walls:
         pygame.draw.rect(screen, BLUE, wall)
     
+    # ドットの描画
+    for dot in dots:
+        pygame.draw.rect(screen,GREEN,dot)
     # プレイヤーの描画
     pygame.draw.rect(screen, YELLOW, pygame.Rect(pacman_x, pacman_y, pacman_size, pacman_size))
     
     # ゴーストの描画
     for ghost in ghosts:
         pygame.draw.rect(screen, RED, pygame.Rect(ghost["x"], ghost["y"], ghost_size, ghost_size))
+    
+    # スコアの描画
+    font = pygame.font.Font(None,36)
+    score_text = font.render(f"Score: {score}", True, WHITE)
+    screen.blit(score_text, (10,10))
 
 # ゲームループ
 clock = pygame.time.Clock()
@@ -133,7 +169,17 @@ while running:
     # 各関数の実行
     move_pacman(keys)
     move_ghosts()
+    respawn_dots()
     draw_game()
+
+    # 敵との衝突判定
+    pacman_rect = pygame.Rect(pacman_x, pacman_y, pacman_size, pacman_size)
+    for ghost in ghosts:
+        ghost_rect = pygame.Rect(ghost["x"], ghost["y"], ghost_size, ghost_size)
+        if pacman_rect.colliderect(ghost_rect):
+            print("Game Over!")
+            pygame.quit()
+            sys.exit()
     
     pygame.display.flip()
     clock.tick(30)
