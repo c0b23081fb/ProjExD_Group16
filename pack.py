@@ -70,6 +70,7 @@ def move_pacman(keys):
     direction = None
     new_x, new_y = pacman_x, pacman_y  # 初期値を設定
     cell_size = 10
+    
     if keys[pygame.K_LEFT]:
         direction = (-cell_size, 0)
     elif keys[pygame.K_RIGHT]:
