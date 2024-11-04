@@ -188,6 +188,7 @@ while running:
             pygame.quit()
             sys.exit()
         if event.type == pygame.KEYDOWN and event.key == pygame.K_w:
+            score -= 10
             wallhack.toggle()
     
     # キー入力の取得
