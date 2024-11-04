@@ -17,6 +17,7 @@ YELLOW = (255, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0,255,0)
+GREEN = (0, 255, 0)  # 回復表示用の色
 
 # キャラクター設定
 pacman_size = cell_size - 4
@@ -26,8 +27,15 @@ normal_speed = cell_size
 pacman_speed = normal_speed
 ghost_speed = 2
 
+
+# 体力設定
+max_health = 100
+current_health = max_health
+healing_amount = 20  # 回復量
+
 # 敵の数の設定
 initial_ghost_count = 5  # 初期の敵の数
+
 
 # 迷路の定義 (1が壁, 0が道)
 maze = [
@@ -58,11 +66,19 @@ for row_index, row in enumerate(maze):
 # ゴーストの位置をランダムに初期化
 ghosts = [{"x": 5 * cell_size, "y": 5 * cell_size} for _ in range(3)]
 
+
 score = 0
 
 # タイマー設定
 DOT_RESPAWN_TIME = 5000
 last_dot_spawa_time = pygame.time.get_ticks()
+class WallHack:
+    def __init__(self):
+        self.enabled = False
+    
+    def toggle(self):
+        self.enabled = not self.enabled
+wallhack = WallHack()
 # プレイヤーの移動（壁との衝突を考慮）
 def move_pacman(keys):
     global pacman_x, pacman_y,score
@@ -94,6 +110,10 @@ def move_pacman(keys):
         if pacman_rect.colliderect(dot):
             dots.remove(dot)
             score += 10
+    # 壁との衝突判定
+    pacman_rect = pygame.Rect(new_x, new_y, pacman_size, pacman_size)
+    if wallhack.enabled or not any(pacman_rect.colliderect(wall) for wall in walls):
+        pacman_x, pacman_y = new_x, new_y  # 壁に衝突しない場合のみ位置を更新
 
 # ゴーストの移動
 def move_ghosts():
@@ -107,6 +127,13 @@ def move_ghosts():
             ghost_rect = pygame.Rect(new_x, new_y, ghost_size, ghost_size)
             if not any(ghost_rect.colliderect(wall) for wall in walls):
                 ghost["x"], ghost["y"] = new_x, new_y  # 壁に衝突しない場合のみ位置を更新
+
+
+# 回復スキル
+def heal():
+    global current_health
+    if current_health < max_health:
+        current_health = min(current_health + healing_amount, max_health)  # 最大HPを超えないようにする
 
 # 敵をランダムに消去する関数
 def eliminate_random_enemy():
@@ -148,6 +175,9 @@ def draw_game():
     font = pygame.font.Font(None,36)
     score_text = font.render(f"Score: {score}", True, WHITE)
     screen.blit(score_text, (10,10))
+    # HPバーの描画
+    pygame.draw.rect(screen, RED, (10, 10, max_health, 10))  # 最大体力
+    pygame.draw.rect(screen, GREEN, (10, 10, current_health, 10))  # 現在の体力
 
 # ゲームループ
 clock = pygame.time.Clock()
@@ -157,6 +187,8 @@ while running:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_w:
+            wallhack.toggle()
     
     # キー入力の取得
     keys = pygame.key.get_pressed()
@@ -164,6 +196,10 @@ while running:
     # ランダムに敵を消去
     if keys[pygame.K_e]:
         eliminate_random_enemy()
+    
+    # 回復スキル発動
+    if keys[pygame.K_f]:
+        heal()
     
     # 各関数の実行
     move_pacman(keys)
