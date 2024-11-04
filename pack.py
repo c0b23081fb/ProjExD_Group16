@@ -55,6 +55,13 @@ for row_index, row in enumerate(maze):
 # ゴーストの位置をランダムに初期化
 ghosts = [{"x": 5 * cell_size, "y": 5 * cell_size} for _ in range(3)]
 
+class WallHack:
+    def __init__(self):
+        self.enabled = False
+    
+    def toggle(self):
+        self.enabled = not self.enabled
+wallhack = WallHack()
 # プレイヤーの移動（壁との衝突を考慮）
 def move_pacman(keys):
     global pacman_x, pacman_y,pacman_speed
@@ -78,7 +85,7 @@ def move_pacman(keys):
 
     # 壁との衝突判定
     pacman_rect = pygame.Rect(new_x, new_y, pacman_size, pacman_size)
-    if not any(pacman_rect.colliderect(wall) for wall in walls):
+    if wallhack.enabled or not any(pacman_rect.colliderect(wall) for wall in walls):
         pacman_x, pacman_y = new_x, new_y  # 壁に衝突しない場合のみ位置を更新
 
 # ゴーストの移動
@@ -122,6 +129,8 @@ while running:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_w:
+            wallhack.toggle()
     
     # キー入力の取得
     keys = pygame.key.get_pressed()
