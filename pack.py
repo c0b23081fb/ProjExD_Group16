@@ -126,10 +126,12 @@ clock = pygame.time.Clock()
 running = True
 while running:
     for event in pygame.event.get():
+        global score
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
         if event.type == pygame.KEYDOWN and event.key == pygame.K_w:
+            score -= 10
             wallhack.toggle()
     
     # キー入力の取得
