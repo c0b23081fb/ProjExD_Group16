@@ -34,7 +34,8 @@ boosted_speed = 8
 
 
 dot_size = 5
-normal_speed = cell_size
+normal_speed = 5
+boosted_speed = 8  # 加速時の速度
 pacman_speed = normal_speed
 ghost_speed = 2
 
@@ -42,6 +43,11 @@ ghost_speed = 2
 max_health = 100
 current_health = max_health
 healing_amount = 20
+
+# 敵停止スキルのタイマー設定
+ghost_freeze_duration = 2000  # 停止時間 (ミリ秒単位)
+ghost_freeze_timer = 0  # タイマーの初期値
+
 
 # 無敵状態の設定
 is_invincible = False
@@ -66,23 +72,14 @@ pacman_x, pacman_y = 1 * cell_size, 1 * cell_size
 
 # 壁のリスト作成
 walls = []
-dots = []
 for row_index, row in enumerate(maze):
     for col_index, cell in enumerate(row):
         if cell == 1:
             walls.append(pygame.Rect(col_index * cell_size, row_index * cell_size, cell_size, cell_size))
-        elif cell == 0:
-            dots.append(pygame.Rect(col_index* cell_size + cell_size // 2 - dot_size // 2, row_index * cell_size + cell_size // 2 - dot_size // 2, dot_size, dot_size))
 
 # ゴーストの位置をランダムに初期化
 ghosts = [{"x": 5 * cell_size, "y": 5 * cell_size} for _ in range(3)]
 
-
-score = 0
-
-# タイマー設定
-DOT_RESPAWN_TIME = 5000
-last_dot_spawa_time = pygame.time.get_ticks()
 class WallHack:
     def __init__(self):
         self.enabled = False
@@ -110,6 +107,8 @@ def check_invincibility():
 
 # プレイヤーの移動
 def move_pacman(keys):
+    global pacman_x, pacman_y,pacman_speed
+
     global pacman_x, pacman_y, pacman_speed
 
 # 進行方向の初期設定（x方向, y方向）
@@ -140,11 +139,24 @@ def move_pacman(keys):
 
     global pacman_x, pacman_y,score
 
-    direction = None
-    new_x, new_y = pacman_x, pacman_y  # 初期値を設定
-    cell_size = 10
-    
+    # Shiftキーが押されている間は加速
+    if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
+        pacman_speed = boosted_speed
+    else:
+        pacman_speed = normal_speed
+
+
+    new_x, new_y = pacman_x, pacman_y
     if keys[pygame.K_LEFT]:
+        new_x -= pacman_speed
+    if keys[pygame.K_RIGHT]:
+        new_x += pacman_speed
+    if keys[pygame.K_UP]:
+        new_y -= pacman_speed
+    if keys[pygame.K_DOWN]:
+        new_y += pacman_speed
+
+
         direction = (-cell_size, 0)
     elif keys[pygame.K_RIGHT]:
         direction = (cell_size, 0)
@@ -254,18 +266,11 @@ def draw_game():
     screen.fill(BLACK)
 
 
-# ドットの再生成関数
-def respawn_dots():
-    global last_dot_spawa_time
-    current_time = pygame.time.get_ticks()
-    if current_time - last_dot_spawa_time > DOT_RESPAWN_TIME:
-        last_dot_spawa_time = current_time
-        for row_index, row in enumerate(maze):
-            for col_index, cell in enumerate(row):
-                if cell == 0:
-                    dot_rect = pygame.Rect(col_index * cell_size + cell_size // 2 - dot_size // 2, row_index * cell_size + cell_size // 2 - dot_size // 2, dot_size, dot_size)
-                    if dot_rect not in dots:
-                        dots.append(dot_rect)
+# 敵を2秒間停止させるスキル
+def freeze_ghosts():
+    global ghost_freeze_timer
+    ghost_freeze_timer = ghost_freeze_duration  # 2秒間のタイマーをセット
+
 
 # ゲームの描画
 def draw_game():
@@ -283,9 +288,6 @@ def draw_game():
 
 
     
-    # ドットの描画
-    for dot in dots:
-        pygame.draw.rect(screen,GREEN,dot)
     # プレイヤーの描画
     pacman_rect = pygame.Rect(pacman_x, pacman_y, pacman_size, pacman_size)
     pygame.draw.rect(screen, YELLOW, pacman_rect)
@@ -319,10 +321,6 @@ def draw_game():
 
 
     
-    # スコアの描画
-    font = pygame.font.Font(None,36)
-    score_text = font.render(f"Score: {score}", True, WHITE)
-    screen.blit(score_text, (10,10))
     # HPバーの描画
     pygame.draw.rect(screen, RED, (10, 10, max_health, 10))  # 最大体力
     pygame.draw.rect(screen, GREEN, (10, 10, current_health, 10))  # 現在の体力
@@ -343,6 +341,7 @@ while running:
 
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_w:
+
             score -= 100
             wallhack.toggle()
 
@@ -353,6 +352,11 @@ while running:
 
     if keys[pygame.K_f]:
         heal()
+
+
+    # 敵を2秒停止するスキル発動
+    if keys[pygame.K_s]:
+        freeze_ghosts()
 
     if keys[pygame.K_i]:  # Iキーで無敵を発動
         activate_invincibility()
@@ -374,19 +378,13 @@ while running:
 
     # 各関数の実行
     move_pacman(keys)
-    move_ghosts()
-    respawn_dots()
-   
 
-    # 敵との衝突判定
-    pacman_rect = pygame.Rect(pacman_x, pacman_y, pacman_size, pacman_size)
-    for ghost in ghosts:
-        ghost_rect = pygame.Rect(ghost["x"], ghost["y"], ghost_size, ghost_size)
-        if pacman_rect.colliderect(ghost_rect):
-            print("Game Over!")
-            pygame.quit()
-            sys.exit()
-    
+    # ゴーストの停止タイマーを更新
+    if ghost_freeze_timer > 0:
+       ghost_freeze_timer -= clock.get_time()  # タイマーを減少
+    else:
+        move_ghosts()
+
     draw_game()
     pygame.display.flip()
     clock.tick(30)
