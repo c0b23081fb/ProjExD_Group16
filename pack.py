@@ -17,6 +17,8 @@ WHITE = (255, 255, 255)
 YELLOW = (255, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
+
 
 GREEN = (0, 255, 0)
 PURPLE = (128, 0, 128)  # ビームの色
@@ -29,6 +31,7 @@ pacman_size = cell_size - 4
 ghost_size = cell_size - 4
 normal_speed = 5
 boosted_speed = 8
+
 
 dot_size = 5
 normal_speed = cell_size
@@ -105,6 +108,10 @@ def check_invincibility():
     if is_invincible and (time.time() - invincible_start_time) >= invincible_duration:
         is_invincible = False
 
+# プレイヤーの移動
+def move_pacman(keys):
+    global pacman_x, pacman_y, pacman_speed
+
 # 進行方向の初期設定（x方向, y方向）
 pacman_direction = (0, 0)
 
@@ -154,6 +161,10 @@ def move_pacman(keys):
             pacman_x, pacman_y = new_x, new_y
 
 
+    pacman_rect = pygame.Rect(new_x, new_y, pacman_size, pacman_size)
+    if wallhack.enabled or not any(pacman_rect.colliderect(wall) for wall in walls):
+        pacman_x, pacman_y = new_x, new_y
+
     # ドットとの衝突判定
     pacman_rect = pygame.Rect(pacman_x,pacman_y,pacman_size,pacman_size)
     for dot in dots[:]:
@@ -198,6 +209,22 @@ def check_beam_collisions():
 # ゴーストの移動
 def move_ghosts():
     for ghost in ghosts:
+        dx, dy = pacman_x - ghost["x"], pacman_y - ghost["y"]
+        dist = math.hypot(dx, dy)
+        if dist != 0:
+            dx, dy = dx / dist, dy / dist
+            new_x = ghost["x"] + dx * ghost_speed
+            new_y = ghost["y"] + dy * ghost_speed
+            ghost_rect = pygame.Rect(new_x, new_y, ghost_size, ghost_size)
+            if not any(ghost_rect.colliderect(wall) for wall in walls):
+                ghost["x"], ghost["y"] = new_x, new_y
+
+# 回復スキル
+def heal():
+    global current_health
+    if current_health < max_health:
+        current_health = min(current_health + healing_amount, max_health)
+
         # ゴーストがランダムに上下左右に移動する例
         direction = random.choice([(0, 2), (0, -2), (2, 0), (-2, 0)])  # (dx, dy)
         ghost["x"] += direction[0] * ghost_speed
@@ -222,6 +249,11 @@ def heal():
     global current_health
     current_health = min(current_health + healing_amount, max_health)
 
+# 描画処理
+def draw_game():
+    screen.fill(BLACK)
+
+
 # ドットの再生成関数
 def respawn_dots():
     global last_dot_spawa_time
@@ -245,6 +277,11 @@ def draw_game():
 
 
         pygame.draw.rect(screen, BLUE, wall)
+
+    pacman_color = YELLOW if not is_invincible else WHITE  # 無敵状態では白色
+    pygame.draw.rect(screen, pacman_color, pygame.Rect(pacman_x, pacman_y, pacman_size, pacman_size))
+
+
     
     # ドットの描画
     for dot in dots:
@@ -276,6 +313,11 @@ def draw_game():
         screen.blit(invincible_surface, (10, 40))
 
         pygame.draw.rect(screen, RED, pygame.Rect(ghost["x"], ghost["y"], ghost_size, ghost_size))
+
+    pygame.draw.rect(screen, RED, (10, 10, max_health, 10))
+    pygame.draw.rect(screen, GREEN, (10, 10, current_health, 10))
+
+
     
     # スコアの描画
     font = pygame.font.Font(None,36)
@@ -303,8 +345,7 @@ while running:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_w:
             score -= 100
             wallhack.toggle()
-    
-    # キー入力の取得
+
     keys = pygame.key.get_pressed()
 
     if keys[pygame.K_e]:
@@ -320,11 +361,14 @@ while running:
     check_invincibility()         # 無敵状態の終了確認
     move_pacman(keys)             # プレイヤーの移動
     move_ghosts()                 # ゴーストの移動
+
     move_beams()                  # ビームの移動
     check_beam_collisions()       # ビームとゴーストの衝突判定
     draw_game()                   # 画面の描画
     
     pygame.display.flip()         # 画面更新
+
+    clock.tick(30)   #フレームレートを設定
 
     clock.tick(30)                # フレームレートを設定
 
