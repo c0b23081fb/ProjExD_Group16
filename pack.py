@@ -200,9 +200,9 @@ def dot_vacuum():
             new_x = dot.x + dx * vacuum.speed/(dist**3)
             new_y = dot.y + dy * vacuum.speed/(dist**3)#自機に近いものほど強力な引力が働くように
             dot_rect = pygame.Rect(new_x, new_y, dot_size, dot_size)
-            if not any(dot_rect.colliderect(wall) for wall in walls) and dist >= 20:
+            if not any(dot_rect.colliderect(wall) for wall in walls) and dist >= 30:
                 dot.x, dot.y = new_x, new_y  # 壁に衝突しない場合のみ位置を更新
-            elif dist < 20:
+            elif dist < 30:
                 dot.x, dot.y = pacman_x, pacman_y #自機との距離が非常に近い場合自機の位置に移動させる(オーバーラン対策)
 
 # ゲームループ
