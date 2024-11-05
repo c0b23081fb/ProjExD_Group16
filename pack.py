@@ -322,10 +322,11 @@ running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
             if event.key == pygame.K_SPACE:  # スペースキーでビームを発射
                 fire_beam()
+            pygame.quit()
+            sys.exit()
+            
 
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_w:
