@@ -81,6 +81,7 @@ pacman_x, pacman_y = 1 * cell_size, 1 * cell_size
 
 # 壁とドットのリスト作成
 walls = []
+dots = []
 for row_index, row in enumerate(maze):
     for col_index, cell in enumerate(row):
         if cell == 1:
