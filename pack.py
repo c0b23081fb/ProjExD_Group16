@@ -26,6 +26,7 @@ PURPLE = (128, 0, 128)  # ビームの色
 GREEN = (0,255,0)
 GREEN = (0, 255, 0)  # 回復表示用の色
 
+
 # キャラクター設定
 pacman_size = cell_size - 4
 ghost_size = cell_size - 4
@@ -38,6 +39,13 @@ normal_speed = 5
 boosted_speed = 8  # 加速時の速度
 pacman_speed = normal_speed
 ghost_speed = 2
+
+
+# スピードブースト設定
+speed_boost_amount = normal_speed * 1.5  # スピードアップの倍率
+speed_boost_cost = 5  # スピードブースト使用時のスコア消費量
+
+
 
 # 体力設定
 max_health = 100
@@ -53,6 +61,7 @@ ghost_freeze_timer = 0  # タイマーの初期値
 is_invincible = False
 invincible_duration = 5  # 5秒間無敵
 invincible_start_time = None
+
 
 # 迷路の定義 (1が壁, 0が道)
 maze = [
@@ -70,15 +79,25 @@ maze = [
 # プレイヤーの初期位置
 pacman_x, pacman_y = 1 * cell_size, 1 * cell_size
 
-# 壁のリスト作成
+# 壁とドットのリスト作成
 walls = []
 for row_index, row in enumerate(maze):
     for col_index, cell in enumerate(row):
         if cell == 1:
             walls.append(pygame.Rect(col_index * cell_size, row_index * cell_size, cell_size, cell_size))
 
+        elif cell == 0:
+            dots.append(pygame.Rect(col_index * cell_size + cell_size // 2 - dot_size // 2, row_index * cell_size + cell_size // 2 - dot_size // 2, dot_size, dot_size))
+
 # ゴーストの位置をランダムに初期化
 ghosts = [{"x": 5 * cell_size, "y": 5 * cell_size} for _ in range(3)]
+score = 0
+
+# 壁貫通スキル
+
+# ゴーストの位置をランダムに初期化
+ghosts = [{"x": 5 * cell_size, "y": 5 * cell_size} for _ in range(3)]
+
 
 class WallHack:
     def __init__(self):
@@ -88,6 +107,25 @@ class WallHack:
         self.enabled = not self.enabled
 
 wallhack = WallHack()
+
+
+# プレイヤーの移動
+def move_pacman(keys):
+    global pacman_x, pacman_y, score, pacman_speed
+
+    direction = None
+    new_x, new_y = pacman_x, pacman_y
+
+    # スピードブーストの発動 (Shiftキー)
+    if keys[pygame.K_LSHIFT] and score >= speed_boost_cost:
+        pacman_speed = speed_boost_amount
+        score -= speed_boost_cost
+    else:
+        pacman_speed = normal_speed
+
+    # 移動方向の決定
+    if keys[pygame.K_LEFT]:
+        direction = (-pacman_speed, 0)
 
 # ビームリスト
 beams = []
@@ -159,11 +197,11 @@ def move_pacman(keys):
 
         direction = (-cell_size, 0)
     elif keys[pygame.K_RIGHT]:
-        direction = (cell_size, 0)
+        direction = (pacman_speed, 0)
     elif keys[pygame.K_UP]:
-        direction = (0, -cell_size)
+        direction = (0, -pacman_speed)
     elif keys[pygame.K_DOWN]:
-        direction = (0, cell_size)
+        direction = (0, pacman_speed)
     
     if direction:
         new_x += direction[0]
@@ -178,11 +216,12 @@ def move_pacman(keys):
         pacman_x, pacman_y = new_x, new_y
 
     # ドットとの衝突判定
-    pacman_rect = pygame.Rect(pacman_x,pacman_y,pacman_size,pacman_size)
+    pacman_rect = pygame.Rect(pacman_x, pacman_y, pacman_size, pacman_size)
     for dot in dots[:]:
         if pacman_rect.colliderect(dot):
             dots.remove(dot)
             score += 10
+
     # 壁との衝突判定
     pacman_rect = pygame.Rect(new_x, new_y, pacman_size, pacman_size)
     if wallhack.enabled or not any(pacman_rect.colliderect(wall) for wall in walls):
@@ -218,6 +257,7 @@ def check_beam_collisions():
                 beams.remove(beam)
                 break
 
+
 # ゴーストの移動
 def move_ghosts():
     for ghost in ghosts:
@@ -237,6 +277,7 @@ def heal():
     if current_health < max_health:
         current_health = min(current_health + healing_amount, max_health)
 
+
         # ゴーストがランダムに上下左右に移動する例
         direction = random.choice([(0, 2), (0, -2), (2, 0), (-2, 0)])  # (dx, dy)
         ghost["x"] += direction[0] * ghost_speed
@@ -250,8 +291,13 @@ def heal():
                 ghost["y"] -= direction[1] * ghost_speed  # 移動を元に戻す
                 break
 
+
 # ランダムに敵を排除する関数
 def eliminate_random_enemy():
+
+    if ghosts:
+        ghosts.pop(random.randint(0, len(ghosts) - 1))
+
     if ghosts:  # ゴーストがいる場合のみ
         ghost_to_remove = random.choice(ghosts)  # ランダムにゴーストを選択
         ghosts.remove(ghost_to_remove)  # ゴーストを削除
@@ -288,6 +334,11 @@ def draw_game():
 
 
     
+    # ドットの描画
+    for dot in dots:
+        pygame.draw.rect(screen, GREEN, dot)
+    
+
     # プレイヤーの描画
     pacman_rect = pygame.Rect(pacman_x, pacman_y, pacman_size, pacman_size)
     pygame.draw.rect(screen, YELLOW, pacman_rect)
@@ -321,6 +372,16 @@ def draw_game():
 
 
     
+
+    # スコアの描画
+    font = pygame.font.Font(None, 36)
+    score_text = font.render(f"Score: {score}", True, WHITE)
+    screen.blit(score_text, (10, 10))
+    
+    # 体力の描画
+    health_text = font.render(f"Health: {current_health}", True, WHITE)
+    screen.blit(health_text, (10, 50))
+
     # HPバーの描画
     pygame.draw.rect(screen, RED, (10, 10, max_health, 10))  # 最大体力
     pygame.draw.rect(screen, GREEN, (10, 10, current_health, 10))  # 現在の体力
@@ -347,6 +408,9 @@ while running:
 
     keys = pygame.key.get_pressed()
 
+
+    # 敵のランダム消去
+
     if keys[pygame.K_e]:
         eliminate_random_enemy()
 
@@ -370,6 +434,22 @@ while running:
     check_beam_collisions()       # ビームとゴーストの衝突判定
     draw_game()                   # 画面の描画
     
+
+    # 各種関数の実行
+    move_pacman(keys)
+    move_ghosts()
+    
+    # ゴーストとの衝突判定
+    pacman_rect = pygame.Rect(pacman_x, pacman_y, pacman_size, pacman_size)
+    for ghost in ghosts:
+        ghost_rect = pygame.Rect(ghost["x"], ghost["y"], ghost_size, ghost_size)
+        if pacman_rect.colliderect(ghost_rect):
+            print("Game Over!")
+            pygame.quit()
+            sys.exit()
+    
+    # ゲーム描画
+
     pygame.display.flip()         # 画面更新
 
     clock.tick(30)   #フレームレートを設定
