@@ -4,6 +4,7 @@ import random
 import math
 import time
 
+
 # 初期設定
 pygame.init()
 screen_width, screen_height = 960, 360
@@ -43,12 +44,9 @@ ghost_freeze_duration = 2000  # 停無敵止時間 (ミリ秒単位)
 ghost_freeze_timer = 0  # タイマーの初期値
 
 # 無敵状態の初期化
-# invincibility_active = False
-# invincibility_start_time = 0
-# invincibility_duration = 5  # 無敵状態の継続時間（秒）
-is_invincible = False
-invincible_start_time = None
-invincible_duration = 5
+invincibility_active = False
+invincibility_start_time = 0
+invincibility_duration = 5  # 無敵状態の継続時間（秒）
 
 # 迷路の定義 (1が壁, 0が道)
 maze = [
@@ -159,20 +157,14 @@ def move_pacman(keys):
             dots.remove(dot)
             score += 10
 
-
-# ビームの発射（8方向）
+# ビームの発射
 def fire_beam():
-    directions = [
-        (-1, 0), (1, 0), (0, -1), (0, 1),    # 左、右、上、下
-        (-1, -1), (1, -1), (-1, 1), (1, 1)   # 左上、右上、左下、右下
-    ]
-    for direction in directions:
-        beam = {
-            "x": pacman_x + pacman_size // 2,
-            "y": pacman_y + pacman_size // 2,
-            "direction": direction
-        }
-        beams.append(beam)
+    beam = {
+        "x": pacman_x + pacman_size // 2,
+        "y": pacman_y + pacman_size // 2,
+        "direction": pacman_direction
+    }
+    beams.append(beam)
 
 # ビームの移動
 def move_beams():
@@ -220,11 +212,13 @@ def heal():
         ghost["x"] += direction[0] * ghost_speed
         ghost["y"] += direction[1] * ghost_speed
 
-        # 壁に衝突しないように位置を調整
+        # 壁に衝突しないように位置を調整する
         ghost_rect = pygame.Rect(ghost["x"], ghost["y"], ghost_size, ghost_size)
-        if any(ghost_rect.colliderect(wall) for wall in walls):
-            ghost["x"] -= direction[0] * ghost_speed
-            ghost["y"] -= direction[1] * ghost_speed
+        for wall in walls:
+            if ghost_rect.colliderect(wall):
+                ghost["x"] -= direction[0] * ghost_speed  # 移動を元に戻す
+                ghost["y"] -= direction[1] * ghost_speed  # 移動を元に戻す
+                break
 
 
 # ランダムに敵を排除する関数
@@ -236,12 +230,10 @@ def eliminate_random_enemy():
         ghost_to_remove = random.choice(ghosts)  # ランダムにゴーストを選択
         ghosts.remove(ghost_to_remove)  # ゴーストを削除
 
-# # ヒールの処理
-# def heal():
-# ゲームのメインループ
-# def game_loop():
-    # global current_health
-    # clock = pygame.time.Clock()
+# ヒールの処理
+def heal():
+    global current_health
+    current_health = min(current_health + healing_amount, max_health)
 
 # ゴースト停止スキル
 def freeze_ghosts():
@@ -252,27 +244,21 @@ def freeze_ghosts():
 # ゲームの描画
 def draw_game():
     screen.fill(BLACK)
-    # while True:
-    # screen.fill(BLACK)
-    keys = pygame.key.get_pressed()
-    move_pacman(keys)
-    move_ghosts()
-    move_beams()
-    check_beam_collisions()
-    check_invincibility()
 
+    # 迷路の描画
     for wall in walls:
+        pygame.draw.rect(screen, WHITE, wall)
+
+
         pygame.draw.rect(screen, BLUE, wall)
 
-        pygame.draw.rect(screen, BLUE, wall)
 
 
-
-
+    
     # ドットの描画
     for dot in dots:
         pygame.draw.rect(screen, GREEN, dot)
-
+    
 
     # プレイヤーの描画
     pacman_rect = pygame.Rect(pacman_x, pacman_y, pacman_size, pacman_size)
@@ -280,13 +266,13 @@ def draw_game():
 
     # ゴーストの描画
     for ghost in ghosts:
-        pygame.draw.rect(screen, RED, pygame.Rect(ghost["x"], ghost["y"], ghost_size, ghost_size))
-
-    pygame.draw.rect(screen, YELLOW, (pacman_x, pacman_y, pacman_size, pacman_size))
+        ghost_rect = pygame.Rect(ghost["x"], ghost["y"], ghost_size, ghost_size)
+        pygame.draw.rect(screen, RED, ghost_rect)
 
     # ビームの描画
     for beam in beams:
-            pygame.draw.circle(screen, PURPLE, (int(beam["x"]), int(beam["y"])), 5)
+        beam_rect = pygame.Rect(beam["x"], beam["y"], 5, 5)
+        pygame.draw.rect(screen, PURPLE, beam_rect)
 
     # ヒール表示
     health_text = f"Health: {current_health}/{max_health}"
@@ -294,7 +280,7 @@ def draw_game():
     text_surface = font.render(health_text, True, WHITE)
     # screen.blit(text_surface, (10, 10))
 
-
+    
 
     # スコアの描画
     font = pygame.font.Font(None, 36)
@@ -335,11 +321,12 @@ def dot_vacuum():
 clock = pygame.time.Clock()
 running = True
 while running:
-    for event in pygame.event.get(): 
-        if event.type == pygame.KEYDOWN:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
             if event.key == pygame.K_SPACE:  # スペースキーでビームを発射
                 fire_beam()
-      
+            pygame.quit()
+            sys.exit()
             
 
 
@@ -356,20 +343,20 @@ while running:
     # キー入力の取得
     keys = pygame.key.get_pressed()
 
-    # for event in pygame.event.get():
-    #     if event.type == pygame.QUIT:
-    #         running = False
-    #     elif event.type == pygame.KEYDOWN:
-    #         if event.key == pygame.K_f:  # 'f'キーで回復
-    #             heal()
-    #         if event.key == pygame.K_g:  # 'g'キーでゴースト停止
-    #             freeze_ghosts()
-    #         if event.key == pygame.K_v:  # 'v'キーで無敵発動
-    #             activate_invincibility()
-    #         if event.key == pygame.K_b:  # 'b'キーでビーム発射
-    #             fire_beam()
-    #         if event.key == pygame.K_h:  # 'h'キーで壁貫通をトグル
-    #             wallhack.toggle()
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_f:  # 'f'キーで回復
+                heal()
+            if event.key == pygame.K_g:  # 'g'キーでゴースト停止
+                freeze_ghosts()
+            if event.key == pygame.K_v:  # 'v'キーで無敵発動
+                activate_invincibility()
+            if event.key == pygame.K_b:  # 'b'キーでビーム発射
+                fire_beam()
+            if event.key == pygame.K_h:  # 'h'キーで壁貫通をトグル
+                wallhack.toggle()
 
     # 敵のランダム消去
 
@@ -421,21 +408,5 @@ while running:
     pygame.display.flip()
     clock.tick(30)
 
-# pygame.quit()
-# sys.exit()
-        # for event in pygame.event.get():
-        #     if event.type == pygame.QUIT:
-        #         pygame.quit()
-        #         sys.exit()
-        #     elif event.type == pygame.KEYDOWN:
-        #         if event.key == pygame.K_SPACE:
-        #             fire_beam()
-        #         elif event.key == pygame.K_h:
-        #             wallhack.toggle()
-        #         elif event.key == pygame.K_i:
-        #             activate_invincibility()
-
-        # pygame.display.flip()
-        # clock.tick(30)
-
-# game_loop()
+pygame.quit()
+sys.exit()
