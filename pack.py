@@ -4,6 +4,7 @@ import random
 import math
 import time
 
+
 # 初期設定
 pygame.init()
 screen_width, screen_height = 960, 360
@@ -51,7 +52,7 @@ maze = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ]
 
-# プレイヤーの初期位置
+# 初期位置
 pacman_x, pacman_y = 1 * cell_size, 1 * cell_size
 
 # 壁のリスト作成
