@@ -4,7 +4,6 @@ import random
 import math
 import time
 
-
 # 初期設定
 pygame.init()
 screen_width, screen_height = 960, 360
@@ -27,12 +26,17 @@ ghost_size = cell_size - 4
 normal_speed = 5
 boosted_speed = 8
 dot_size = 5
+normal_speed = 5
+boosted_speed = 8  # 加速時の速度
 pacman_speed = normal_speed
 ghost_speed = 2
+
 
 # スピードブースト設定
 speed_boost_amount = normal_speed * 1.5  # スピードアップの倍率
 speed_boost_cost = 5  # スピードブースト使用時のスコア消費量
+
+
 
 # 体力設定
 max_health = 100
@@ -40,13 +44,15 @@ current_health = max_health
 healing_amount = 20
 
 # 敵停止スキルのタイマー設定
-ghost_freeze_duration = 2000  # 停無敵止時間 (ミリ秒単位)
+ghost_freeze_duration = 2000  # 停止時間 (ミリ秒単位)
 ghost_freeze_timer = 0  # タイマーの初期値
 
-# 無敵状態の初期化
-invincibility_active = False
-invincibility_start_time = 0
-invincibility_duration = 5  # 無敵状態の継続時間（秒）
+
+# 無敵状態の設定
+is_invincible = False
+invincible_duration = 5  # 5秒間無敵
+invincible_start_time = None
+
 
 # 迷路の定義 (1が壁, 0が道)
 maze = [
@@ -61,7 +67,7 @@ maze = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ]
 
-# 初期位置
+# プレイヤーの初期位置
 pacman_x, pacman_y = 1 * cell_size, 1 * cell_size
 
 # 壁とドットのリスト作成
@@ -71,6 +77,7 @@ for row_index, row in enumerate(maze):
     for col_index, cell in enumerate(row):
         if cell == 1:
             walls.append(pygame.Rect(col_index * cell_size, row_index * cell_size, cell_size, cell_size))
+
         elif cell == 0:
             dots.append(pygame.Rect(col_index * cell_size + cell_size // 2 - dot_size // 2, row_index * cell_size + cell_size // 2 - dot_size // 2, dot_size, dot_size))
 
@@ -92,13 +99,13 @@ wallhack = WallHack()
 beams = []
 beam_speed = 10
 
-# 無敵状態のアクティベート関数
+# 無敵状態を開始する関数
 def activate_invincibility():
-    global invincibility_active, invincible_start_time
+    global is_invincible, invincible_start_time
     is_invincible = True
     invincible_start_time = time.time()
 
-# 無敵状態のチェック関数
+# 無敵状態の終了を確認する関数
 def check_invincibility():
     global is_invincible
     if is_invincible and (time.time() - invincible_start_time) >= invincible_duration:
@@ -179,26 +186,27 @@ def move_beams():
 def check_beam_collisions():
     global ghosts
     for beam in beams:
-        beam_rect = pygame.Rect(beam["x"], beam["y"], 10, 10)
-        for ghost in ghosts[:]:
+        beam_rect = pygame.Rect(beam["x"], beam["y"], 5, 5)
+        for ghost in ghosts:
             ghost_rect = pygame.Rect(ghost["x"], ghost["y"], ghost_size, ghost_size)
             if beam_rect.colliderect(ghost_rect):
                 ghosts.remove(ghost)
                 beams.remove(beam)
                 break
 
+
 # ゴーストの移動
 def move_ghosts():
     for ghost in ghosts:
-        if ghost_freeze_timer > pygame.time.get_ticks():
-            continue
-        direction = random.choice([(1, 0), (-1, 0), (0, 1), (0, -1)])
-        ghost["x"] += direction[0] * ghost_speed
-        ghost["y"] += direction[1] * ghost_speed
-        ghost_rect = pygame.Rect(ghost["x"], ghost["y"], ghost_size, ghost_size)
-        if any(ghost_rect.colliderect(wall) for wall in walls):
-            ghost["x"] -= direction[0] * ghost_speed
-            ghost["y"] -= direction[1] * ghost_speed
+        dx, dy = pacman_x - ghost["x"], pacman_y - ghost["y"]
+        dist = math.hypot(dx, dy)
+        if dist != 0:
+            dx, dy = dx / dist, dy / dist
+            new_x = ghost["x"] + dx * ghost_speed
+            new_y = ghost["y"] + dy * ghost_speed
+            ghost_rect = pygame.Rect(new_x, new_y, ghost_size, ghost_size)
+            if not any(ghost_rect.colliderect(wall) for wall in walls):
+                ghost["x"], ghost["y"] = new_x, new_y
 
 # 回復スキル
 def heal():
@@ -235,10 +243,15 @@ def heal():
     global current_health
     current_health = min(current_health + healing_amount, max_health)
 
-# ゴースト停止スキル
+# 描画処理
+def draw_game():
+    screen.fill(BLACK)
+
+
+# 敵を2秒間停止させるスキル
 def freeze_ghosts():
     global ghost_freeze_timer
-    ghost_freeze_timer = pygame.time.get_ticks() + ghost_freeze_duration
+    ghost_freeze_timer = ghost_freeze_duration  # 2秒間のタイマーをセット
 
 
 # ゲームの描画
@@ -343,20 +356,6 @@ while running:
     # キー入力の取得
     keys = pygame.key.get_pressed()
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_f:  # 'f'キーで回復
-                heal()
-            if event.key == pygame.K_g:  # 'g'キーでゴースト停止
-                freeze_ghosts()
-            if event.key == pygame.K_v:  # 'v'キーで無敵発動
-                activate_invincibility()
-            if event.key == pygame.K_b:  # 'b'キーでビーム発射
-                fire_beam()
-            if event.key == pygame.K_h:  # 'h'キーで壁貫通をトグル
-                wallhack.toggle()
 
     # 敵のランダム消去
 
@@ -407,6 +406,3 @@ while running:
     draw_game()
     pygame.display.flip()
     clock.tick(30)
-
-pygame.quit()
-sys.exit()
